@@ -1,0 +1,19 @@
+{
+	"name": "cookie-pls",
+	"version": "1.0.0",
+	"main": "dist/index.js",
+	"scripts": {
+		"build": "tsc",
+		"start": "pnpm build && node dist/index.js"
+	},
+	"devDependencies": {
+		"@types/better-sqlite3": "^7.6.10",
+		"@types/node": "^20.12.12",
+		"typescript": "^5.4.5"
+	},
+	"dependencies": {
+		"better-sqlite3": "^10.0.0",
+		"crypto": "^1.0.1",
+		"keytar": "^7.9.0"
+	}
+}
