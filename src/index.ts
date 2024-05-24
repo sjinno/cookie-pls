@@ -18,7 +18,10 @@ type Cookie = {
   is_persistent: number;
   priority: number;
   profile: string;
+  samesite: number;
 };
+
+type SameSite = "no_restriction" | "lax" | "strict" | "unspecified";
 
 // Function to get Chrome profiles directory
 function getChromeProfilesPath(): string {
@@ -71,7 +74,7 @@ function readCookiesFromProfile(profilePath: string): Cookie[] {
   const db = new Database(cookiesPath, { readonly: true });
   const cookies = db
     .prepare(
-      "SELECT host_key, name, value, encrypted_value, path, expires_utc, is_secure, is_httponly, last_access_utc, has_expires, is_persistent, priority FROM cookies"
+      "SELECT host_key, name, value, encrypted_value, path, expires_utc, is_secure, is_httponly, last_access_utc, has_expires, is_persistent, priority, samesite FROM cookies"
     )
     .all();
   db.close();
@@ -102,12 +105,26 @@ function readAllCookies(): Cookie[] {
   return allCookies;
 }
 
+function convertSameSite(samesite: number): SameSite {
+  switch (samesite) {
+    case 0:
+      return "no_restriction";
+    case 1:
+      return "lax";
+    case 2:
+      return "strict";
+    default:
+      return "unspecified";
+  }
+}
+
 async function main() {
   let count = 1;
   const cookies = readAllCookies();
   for (const cookie of cookies) {
     const decrypted = await decryptCookie(cookie.encrypted_value);
-    console.log(count++ + ". " + cookie.name + ":\n" + decrypted + "\n");
+    const samesite = convertSameSite(cookie.samesite);
+    console.log(`${count++}. ${cookie.name} (${samesite}):\n${decrypted}\n`);
   }
 }
 
