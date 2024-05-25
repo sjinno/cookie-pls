@@ -20,9 +20,10 @@ async function main() {
   // localStorage
   let count = 1;
   const localStorage = await readChromeLocalStorage();
-  for (const key in localStorage) {
-    console.log(`${count++}. ${key}:\n${localStorage[key]}\n`);
-  }
+  console.log("shohei - localStorage", localStorage);
+  // for (const key in localStorage) {
+  //   console.log(`${count++}. ${key}:\n${localStorage[key]}\n`);
+  // }
 }
 
 main();

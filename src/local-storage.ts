@@ -1,58 +1,19 @@
 import path from "path";
-import os from "os";
 import levelup from "levelup";
 import leveldown from "leveldown";
+import { getChromeProfilesPath, getProfileDirectories } from "./utils";
 
 type LocalStorageData = {
   [key: string]: string;
 };
 
-function getChromeLocalStoragePath() {
-  const homeDir = os.homedir();
-  switch (os.platform()) {
-    case "win32":
-      return path.join(
-        homeDir,
-        "AppData",
-        "Local",
-        "Google",
-        "Chrome",
-        "User Data",
-        "Default",
-        "Local Storage",
-        "leveldb"
-      );
-    case "darwin":
-      return path.join(
-        homeDir,
-        "Library",
-        "Application Support",
-        "Google",
-        "Chrome",
-        "Default",
-        "Local Storage",
-        "leveldb"
-      );
-    case "linux":
-      return path.join(
-        homeDir,
-        ".config",
-        "google-chrome",
-        "Default",
-        "Local Storage",
-        "leveldb"
-      );
-    default:
-      throw new Error("Unsupported platform");
-  }
-}
-
-export function readChromeLocalStorage(): Promise<LocalStorageData> {
-  const localStoragePath = getChromeLocalStoragePath();
-  const db = levelup(leveldown(localStoragePath));
-
+function readLocalStorageData(profilePath: string): Promise<LocalStorageData> {
   return new Promise((resolve, reject) => {
+    const localStoragePath = path.join(profilePath, "Local Storage", "leveldb");
+    const db = levelup(leveldown(localStoragePath));
+
     const localStorageData: LocalStorageData = {};
+
     db.createReadStream()
       .on("data", function (data) {
         // Assuming keys and values are stored as UTF-8 strings
@@ -66,8 +27,32 @@ export function readChromeLocalStorage(): Promise<LocalStorageData> {
       .on("error", function (err) {
         reject(err);
       })
-      .on("close", function () {
+      .on("end", function () {
         resolve(localStorageData);
       });
   });
+}
+
+export async function readChromeLocalStorage() {
+  const profilesPath = getChromeProfilesPath();
+  const profilePaths = getProfileDirectories(profilesPath);
+
+  const allLocalStorageData: LocalStorageData[] = [];
+
+  for (const profilePath of profilePaths) {
+    const storagePath = path.join(profilesPath, profilePath);
+
+    try {
+      const localStorageData = await readLocalStorageData(storagePath);
+      // allLocalStorageData[profileName] = localStorageData;
+      allLocalStorageData.push(localStorageData);
+    } catch (error) {
+      console.error(
+        `Failed to read local storage data for profile ${storagePath}:`,
+        error
+      );
+    }
+  }
+
+  return allLocalStorageData;
 }

@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import os from "os";
 import Database from "better-sqlite3";
+import { getChromeProfilesPath, getProfileDirectories } from "./utils";
 
 type Cookie = {
   host_key: string;
@@ -20,50 +21,12 @@ type Cookie = {
   samesite: number;
 };
 
-// Function to get Chrome profiles directory
-function getChromeProfilesPath(): string {
-  const homedir = os.homedir();
-  switch (os.platform()) {
-    case "win32":
-      return path.join(
-        homedir,
-        "AppData",
-        "Local",
-        "Google",
-        "Chrome",
-        "User Data"
-      );
-    case "darwin":
-      return path.join(
-        homedir,
-        "Library",
-        "Application Support",
-        "Google",
-        "Chrome"
-      );
-    case "linux":
-      return path.join(homedir, ".config", "google-chrome");
-    default:
-      throw new Error("Unsupported platform");
-  }
-}
-
-// Function to get all profile directories (this includes Default)
-function getProfileDirectories(profilesPath: string): string[] {
-  return fs.readdirSync(profilesPath).filter((file: string) => {
-    if (file === "Default" || file.startsWith("Profile")) {
-      return fs.statSync(path.join(profilesPath, file)).isDirectory();
-    }
-    return false;
-  });
-}
-
 // Function to read cookies from a profile
 function readCookiesFromProfile(profilePath: string): Cookie[] {
   const unix = os.platform() !== "win32";
-  const pathToCookies = unix ? "Cookies" : path.join("Network", "Cookies");
+  const cookiesPath_ = unix ? "Cookies" : path.join("Network", "Cookies");
+  const cookiesPath = path.join(profilePath, cookiesPath_);
 
-  const cookiesPath = path.join(profilePath, pathToCookies);
   if (!fs.existsSync(cookiesPath)) {
     return [];
   }
@@ -85,10 +48,11 @@ export function readAllCookies(): Cookie[] {
   const profiles = getProfileDirectories(profilesPath);
 
   let allCookies: Cookie[] = [];
+
   profiles.forEach((profile: string) => {
     const profilePath = path.join(profilesPath, profile);
-    // console.log("shohei - profilePath", profilePath);
     const cookies = readCookiesFromProfile(profilePath);
+
     allCookies = allCookies.concat(
       cookies
         .filter(
